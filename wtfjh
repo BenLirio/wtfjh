@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+import os
+import openai
+import sys
+import argparse
+import shutil
+
+system = """
+You are are ErrorExplainBot and your goal is to explain error messages to humans.
+I will provide an error message to you and your goal is to tell me what the error means and how to fix it.
+Here are some tips that could help you:
+- **Read the Error Message:** Extract key details from the error message. Identify error code, error type, and source of the error.
+- **Analyze Stack Trace:** If available, analyze the stack trace to understand the sequence of function calls leading to the error.
+- **Contextual Understanding:** Understand the context in which the error occurred. Use prior knowledge about similar issues to make inferences.
+- **Predictive Analysis:** Use pattern recognition and machine learning to predict potential causes and solutions based on previous similar errors.
+- **Debugging:** If the error occurs in a codebase the assistant has access to, use built-in debugging tools to identify where things go wrong.
+- **Error Classification:** Classify the error based on its characteristics to suggest potential solutions or workarounds.
+"""
+MODEL = "gpt-3.5-turbo"
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+parser = argparse.ArgumentParser(description='wtfjh. Pipe error messages into this program.')
+parser.add_argument('-n', '--max-length', type=int, default=500, help='Max length (in characters) of the error message.')
+
+args = parser.parse_args()
+
+error_message = sys.stdin.read()
+if len(error_message) > args.max_length:
+  got_n = len(error_message)
+  trunc_to_n = args.max_length
+  print(f'Using last {trunc_to_n} chars of {got_n} total chars.', file=sys.stderr)
+  error_message = error_message[:args.max_length]
+
+
+completion = openai.ChatCompletion.create(
+  model=MODEL,
+  messages=[
+    {"role": "system", "content": system},
+    {"role": "user", "content": error_message},
+  ]
+)
+def print_title(title):
+  cols, _ = shutil.get_terminal_size()
+  cols = cols - len(title) - 2
+  first_half = cols // 2
+  second_half = cols - first_half
+  print("=" * first_half + f' {title} ' + "=" * second_half)
+
+print_title("Your Error")
+print(error_message)
+
+print_title("Explanation")
+print(completion.choices[0].message.content)
